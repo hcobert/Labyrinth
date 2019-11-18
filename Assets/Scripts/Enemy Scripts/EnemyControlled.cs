@@ -2,51 +2,56 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PlayerControlled : MonoBehaviour
+public class EnemyControlled : MonoBehaviour
 {
-    //take inputs for object's default acceleration, deceleration and maxSpeed
-    //these will NOT change during run time
+    //take inputs for object's target, acceleration, deceleration, max speed and sight range
+    public Transform target;
     public float defaultAcceleration;
     public float defaultDeceleration;
     public float defaultMaxSpeed;
+    public float sightRange;
 
-    //these are subject to change based on floor
     public float acceleration;
     public float deceleration;
     public float maxSpeed;
-
+    
     //initialise vectors
     private Vector2 directionVector;
     private Vector2 velocityVector;
 
     //initialise rigidbody
     Rigidbody2D body;
-   
+
     //approach inTarget from inStart by inRate each tick
-    public float Approach(float inStart,float inTarget,float inRate)
+    public float Approach(float inStart, float inTarget, float inRate)
     {
         if (inStart < inTarget)
         {
             inStart += inRate;
-            return Mathf.Min(inStart,inTarget);
+            return Mathf.Min(inStart, inTarget);
         }
         else if (inStart > inTarget)
         {
             inStart -= inRate;
-            return Mathf.Max(inStart,inTarget);
+            return Mathf.Max(inStart, inTarget);
         }
         else
         {
             return inStart;
-        }        
+        }
     }
 
     void Start()
     {
+        if (target == null)
+        {
+            target = GameObject.FindWithTag("Player").transform;
+        }
+
         //set the rigidbody we are working with to the rigidbody of the object
         body = GetComponent<Rigidbody2D>();
     }
-
+    
     //allows other objects to change movement properties of object
     void SetAcceleration(float inAcceleration)
     {
@@ -75,39 +80,25 @@ public class PlayerControlled : MonoBehaviour
     }
 
     void FixedUpdate()
-    {    
-        //direction vector determined by user input and normalized
-        float inX = Input.GetAxisRaw("Horizontal");
-        float inY = Input.GetAxisRaw("Vertical");
-        directionVector.x = inX;
-        directionVector.y = inY;
-        directionVector.Normalize();
-
-        // if player is pressing buttons
-        if ((inX != 0) || (inY != 0))
+    {
+        //direction vector determined by target position
+        directionVector = target.position - transform.position;
+        
+        
+        //If target is in range of sight move towards target
+        if (directionVector.magnitude <= sightRange)
         {
+            directionVector.Normalize();
             velocityVector += directionVector * acceleration;
         }
-        // if player is not pressing buttons
+        //Else decelerate
         else
         {
-            velocityVector.x = Approach(velocityVector.x, 0, deceleration);            
-            velocityVector.y = Approach(velocityVector.y, 0, deceleration);
-        }
-
-        // if player is not pressing horizontal buttons
-        if (inX == 0)
-        {
             velocityVector.x = Approach(velocityVector.x, 0, deceleration);
-        }
-
-        // if player is not pressing vertical buttons
-        if (inY == 0)
-        {
             velocityVector.y = Approach(velocityVector.y, 0, deceleration);
         }
-
-        // if object is going faster than its max speed, set its speed to its max speed
+        
+        //if object is going faster than its max speed, set its speed to its max speed
         if (velocityVector.magnitude > maxSpeed)
         {
             velocityVector.Normalize();
